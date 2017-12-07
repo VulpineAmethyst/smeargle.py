@@ -127,6 +127,10 @@ def main():
     (font, script) = sys.argv[1:3]
     font_info = None
     script_base, ext = op.splitext(script)
+    if not op.exists('output/'):
+        import os
+        os.mkdir('output')
+    script_base = 'output/' + script_base
     output = script_base + '.png'
     output_raw = script_base + '.bin'
 
