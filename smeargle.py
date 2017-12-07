@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2018 Kiyoshi Aman
 #
 # Permission to use, copy, modify, and/or distribute this software for any
