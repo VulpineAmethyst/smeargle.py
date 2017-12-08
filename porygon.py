@@ -18,7 +18,7 @@ import os.path as op
 
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QGuiApplication
 
-def linear1(tile):
+def linear1(tile, *args):
     data = bytearray()
 
     for y in range(8):
@@ -32,7 +32,7 @@ def linear1(tile):
 
     return bytes(data)
 
-def linear2(tile):
+def linear2(tile, palette):
     data = bytearray()
 
     for y in range(8):
@@ -41,6 +41,8 @@ def linear2(tile):
 
         for x in range(8):
             pixel = tile.pixelIndex(x, y)
+            if palette is not None:
+                pixel = palette[pixel]
 
             a = pixel & 0x1
             b = pixel & 0x2
@@ -53,7 +55,7 @@ def linear2(tile):
 
     return bytes(data)
 
-def planar2(tile):
+def planar2(tile, palette):
     data = bytearray()
 
     for y in range(8):
@@ -62,6 +64,8 @@ def planar2(tile):
 
         for x in range(4):
             pixel = tile.pixelIndex(x, y)
+            if palette is not None:
+                pixel = palette[pixel]
             pixel &= 0x3
             byte = byte + (pixel << x * 2)
 
@@ -78,7 +82,7 @@ def planar2(tile):
 
     return bytes(data)
 
-def linear4(tile):
+def linear4(tile, palette):
     data = bytearray()
 
     for y in range(8):
@@ -89,6 +93,8 @@ def linear4(tile):
 
         for x in range(8):
             pixel = tile.pixelIndex(x, y)
+            if palette is not None:
+                pixel = palette[pixel]
 
             a = pixel & 0x1
             b = pixel & 0x2
@@ -128,7 +134,8 @@ def main():
         print(
             '''Usage: porygon.py image format
 
-image is an image file in PNG.
+image is an image file in PNG. The base filename is also used to find a
+mapper in order to force palette modifications.
 
 format is one of the supported formats:'''
         )
@@ -139,6 +146,7 @@ format is one of the supported formats:'''
     (image, format) = sys.argv[1:3]
     (image_base, ext) = op.splitext(image)
     output = '{}.bin'.format(image_base)
+    mapper = image_base + '.txt'
 
     if not op.exists('output/'):
         import os
@@ -158,8 +166,24 @@ format is one of the supported formats:'''
     height = data.height()
     rows = int(height / 8)
     columns = int(width / 8)
-    print('  {} rows'.format(rows))
-    print('  {} columns'.format(columns))
+
+    palette = {}
+    if op.exists(mapper):
+        print('Palette found. Loading...')
+        with open(mapper, mode='r') as f:
+            text = f.read().split('\n')
+
+        for line in text:
+            if line == '':
+                continue
+            a = line.split('=')
+
+            key = int(a[0])
+            value = int(a[1])
+            palette[key] = value
+    else:
+        print('No palette found.')
+        palette = None
 
     print('Converting to {}'.format(format))
     counter = 0
@@ -167,7 +191,7 @@ format is one of the supported formats:'''
         for row in range(rows):
             for column in range(columns):
                 tile = data.copy(column * 8, row * 8, 8, 8)
-                f.write(formats[format](tile))
+                f.write(formats[format](tile, palette))
                 counter += 1
 
 if __name__ == '__main__':
