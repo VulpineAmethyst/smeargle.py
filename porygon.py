@@ -14,6 +14,7 @@
 # IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import sys
+import os.path as op
 
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QGuiApplication
 
@@ -43,9 +44,9 @@ def linear2(tile):
 
             a = pixel % 2
             b = int(pixel / 2)
-            if a == 1:
+            if a >= 1:
                 bp1 += 2**x
-            if b == 1:
+            if b >= 1:
                 bp2 += 2**x
 
         data.extend((bp1, bp2))
@@ -87,7 +88,7 @@ formats = {
 def main():
     app = QGuiApplication(sys.argv)
 
-    if len(sys.argv < 3):
+    if len(sys.argv < 3) or sys.argv[2] not in formats.keys():
         print(
             '''Usage: porygon.py image format
 
@@ -98,3 +99,34 @@ def main():
         )
         for format in formats.keys():
             print('* {}'.format(format))
+        sys.exit(1)
+
+    (image, format) = sys.argv[1:3]
+    (image_base, ext) = op.splitext(image)
+    output = '{}.bin'.format(image_base)
+
+    if not op.exists('output/'):
+        import os
+        os.mkdir('output')
+    if not output.startswith('output/'):
+        output = 'output/{}'.format(output)
+
+    bpp = int(format[-1])
+
+    print('Loading image...')
+    data = QImage(image)
+    data = data.convertToFormat(QImage.Format_Indexed8)
+    if data.colorCount() > 2**bpp:
+        raise ValueError('image has too many colors')
+
+    width = data.width()
+    height = data.height()
+    rows = int(height / 8)
+    columns = int(width / 8)
+
+    print('Converting to {}'.format(format))
+    with open(output, mode='wb') as f:
+        for row in range(rows):
+            for column in range(columns):
+                tile = data.copy(row * 8, column * 8, 8, 8)
+                f.write(formats[format](tile))
