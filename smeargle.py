@@ -20,73 +20,6 @@ from math import ceil
 
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QGuiApplication
 
-def pack(bits=2, bytes=()):
-    min = 0
-    max = 2**bits - 1
-    base = 0
-    shift = 0
-    ret = bytearray()
-
-    for byte in bytes:
-        if byte > max:
-            raise ValueError('{} exceeds bit cap'.format(bin(byte)))
-
-        base = base + ((byte & max) << shift)
-        shift += bits
-
-    while base > 0:
-        byte = base & 0xFF
-        ret.append(byte)
-        base -= 256
-
-    ret.reverse()
-
-    return ret
-
-def export(image, filename, bits=2):
-    if bits == 2:
-        write = 4
-    elif bits == 3:
-        write = 8
-    elif bits == 4:
-        write = 2
-    else:
-        raise ValueError('too many bits per pixel')
-
-    if image.colorCount() > 2**bits:
-        raise ValueError('too many colors')
-
-    with open(filename, mode='wb') as f:
-        qwidth = int(image.width() / write)
-
-        for y in range(image.height()):
-            for qx in range(qwidth):
-                if write == 4:
-                    packing = (
-                        image.pixelIndex(qx * write + 0, y),
-                        image.pixelIndex(qx * write + 1, y),
-                        image.pixelIndex(qx * write + 2, y),
-                        image.pixelIndex(qx * write + 3, y)
-                    )
-                elif write == 2:
-                    packing = (
-                        image.pixelIndex(qx * write + 0, y),
-                        image.pixelIndex(qx * write + 1, y)
-                    )
-                elif write == 6:
-                    packing = (
-                        image.pixelIndex(qx * write + 0, y),
-                        image.pixelIndex(qx * write + 1, y),
-                        image.pixelIndex(qx * write + 2, y),
-                        image.pixelIndex(qx * write + 3, y),
-                        image.pixelIndex(qx * write + 4, y),
-                        image.pixelIndex(qx * write + 5, y),
-                        image.pixelIndex(qx * write + 6, y),
-                        image.pixelIndex(qx * write + 7, y),
-                    )
-
-                f.write(pack(bits, packing))
-
 class Font(QPixmap):
     """A simple class for basic bitmap fonts."""
     def __init__(self, filename, width=8, height=8):
@@ -234,8 +167,6 @@ def main():
     print('Saving rendered tilemap...')
     file = QPixmap.fromImage(image)
     file.save(output, 'PNG')
-    print('Exporting as 2bpp...')
-    export(image.convertToFormat(QImage.Format_Indexed8), output_raw, font_info['bits_per_pixel'])
 
 if __name__ == '__main__':
     main()
