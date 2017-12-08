@@ -160,8 +160,8 @@ format is one of the supported formats:'''
     print('Converting to {}'.format(format))
     counter = 0
     with open(output, mode='wb') as f:
-        for column in range(columns):
-            for row in range(rows):
+        for row in range(rows):
+            for column in range(columns):
                 tile = data.copy(column * 8, row * 8, 8, 8)
                 f.write(formats[format](tile))
                 counter += 1
