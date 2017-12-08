@@ -26,9 +26,9 @@ def linear1(tile):
 
         for x in range(8):
             if tile.pixelIndex(x, y) > 0:
-                byte += 2**x
+                byte += 2**(8 - x)
 
-        data.insert(0, byte)
+        data.append(byte)
 
     return bytes(data)
 
@@ -42,15 +42,14 @@ def linear2(tile):
         for x in range(8):
             pixel = tile.pixelIndex(x, y)
 
-            a = pixel % 2
-            b = int(pixel / 2)
-            if a >= 1:
-                bp1 += 2**x
-            if b >= 1:
-                bp2 += 2**x
+            a = pixel & 0x1
+            b = pixel & 0x2
+            if a:
+                bp1 += 2**(7 - x)
+            if b:
+                bp2 += 2**(7 - x)
 
-        data.insert(0, bp2)
-        data.insert(0, bp1)
+        data.extend((bp1, bp2))
 
     return bytes(data)
 
@@ -64,14 +63,14 @@ def planar2(tile):
             pixel = tile.pixelIndex(x, y)
             byte = byte & (pixel << (4 - x))
 
-        data.insert(0, byte)
+        data.append(byte)
         byte = 0
 
         for x in range(4, 8):
             pixel = tile.pixelIndex(x, y)
             byte = byte & (pixel << (8 - x))
 
-        data.insert(0, byte)
+        data.append(byte)
 
     return bytes(data)
 
@@ -92,18 +91,15 @@ def linear4(tile):
             c = pixel & 0x4
             d = pixel & 0x8
             if a:
-                bp1 += 2**x
+                bp1 += 2**(8 - x)
             if b:
-                bp2 += 2**x
+                bp2 += 2**(8 - x)
             if c:
-                bp3 += 2**x
+                bp3 += 2**(8 - x)
             if d:
-                bp3 += 2**x
+                bp3 += 2**(8 - x)
 
-        data.insert(0, bp4)
-        data.insert(0, bp3)
-        data.insert(0, bp2)
-        data.insert(0, bp1)
+        data.extend((bp1, bp2, bp3, bp4))
 
     return bytes(data)
 
@@ -158,13 +154,17 @@ format is one of the supported formats:'''
     height = data.height()
     rows = int(height / 8)
     columns = int(width / 8)
+    print('  {} rows'.format(rows))
+    print('  {} columns'.format(columns))
 
     print('Converting to {}'.format(format))
+    counter = 0
     with open(output, mode='wb') as f:
-        for row in range(rows):
-            for column in range(columns):
-                tile = data.copy(row * 8, column * 8, 8, 8)
+        for column in range(columns):
+            for row in range(rows):
+                tile = data.copy(column * 8, row * 8, 8, 8)
                 f.write(formats[format](tile))
+                counter += 1
 
 if __name__ == '__main__':
     main()
