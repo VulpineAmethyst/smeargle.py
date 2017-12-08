@@ -133,7 +133,7 @@ def main():
 
             if data not in tilemap.keys():
                 tilemap[data] = tile
-                tilemap_index[data] = str(counter_unique)
+                tilemap_index[data] = '0x{:02x}'.format(counter_unique)
                 counter_unique += 1
 
             text_tiles.append(tilemap_index[data])
