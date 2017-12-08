@@ -38,15 +38,7 @@ in the map.
     }
 }
 
-Raw output
-----------
-The raw output is fairly simple. For 2bpp, four pixels are encoded at a time.
-For 3bpp, six pixels are encoded at a time. For 4bpp, only two are encoded at
-a time. Raw output looks like:
-
-    2bpp [0123]     ->                       0b11100100
-    3bpp [01234543] -> 0b01110010 0b01000110 0b10001000
-    4bpp [01]       ->                       0b00010000
-
-Note that it doesn't matter how the pixels are arranged in the original image;
-your code should be aware of the image dimensions regardless.
+Changelog:
+0.2.2
+* Removed binary output. It wasn't emitting anything actually useful to anyone.
+* Emit index map as hex.
