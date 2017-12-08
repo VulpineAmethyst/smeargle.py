@@ -58,17 +58,21 @@ def planar2(tile):
 
     for y in range(8):
         byte = 0
+        shift = 0
 
         for x in range(4):
             pixel = tile.pixelIndex(x, y)
-            byte = byte & (pixel << (4 - x))
+            pixel &= 0x3
+            byte = byte + (pixel << x * 2)
 
         data.append(byte)
         byte = 0
 
         for x in range(4, 8):
             pixel = tile.pixelIndex(x, y)
-            byte = byte & (pixel << (8 - x))
+            pixel &= 0x3
+            byte = byte + (pixel << shift)
+            shift += 2
 
         data.append(byte)
 
@@ -91,13 +95,13 @@ def linear4(tile):
             c = pixel & 0x4
             d = pixel & 0x8
             if a:
-                bp1 += 2**(8 - x)
+                bp1 += 2**(7 - x)
             if b:
-                bp2 += 2**(8 - x)
+                bp2 += 2**(7 - x)
             if c:
-                bp3 += 2**(8 - x)
+                bp3 += 2**(7 - x)
             if d:
-                bp3 += 2**(8 - x)
+                bp3 += 2**(7 - x)
 
         data.extend((bp1, bp2, bp3, bp4))
 
