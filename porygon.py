@@ -30,6 +30,8 @@ def linear1(tile):
 
         data.append(byte)
 
+    data.reverse()
+
     return bytes(data)
 
 def linear2(tile):
@@ -51,6 +53,8 @@ def linear2(tile):
 
         data.extend((bp1, bp2))
 
+    data.reverse()
+
     return bytes(data)
 
 def planar2(tile):
@@ -71,6 +75,8 @@ def planar2(tile):
             byte = byte & (pixel << (8 - x))
 
         data.append(byte)
+
+    data.reverse()
 
     return bytes(data)
 
