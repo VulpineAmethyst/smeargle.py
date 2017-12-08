@@ -1,5 +1,5 @@
-Smeargle 0.2.1 readme
--------------------
+Smeargle 0.3.0 readme
+---------------------
 Usage: smeargle.py font.json script.txt
 
 font.json is a JSON document which describes the font and provides a mapping
@@ -38,7 +38,18 @@ in the map.
     }
 }
 
+porygon.py
+----------
+Usage: porygon.py image format
+
+This script converts the image into the target format. Run porygon.py without
+arguments to see what formats are available.
+
 Changelog:
+0.3.0
+* Added porygon.py script. Linear 1 & 2 and planar 2 bits-per-pixel formats
+  are supported.
+
 0.2.2
 * Removed binary output. It wasn't emitting anything actually useful to anyone.
 * Emit index map as hex.
