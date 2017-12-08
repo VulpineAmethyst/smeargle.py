@@ -158,6 +158,7 @@ def main():
             column = 0
             row += height
     painter.end()
+    image = image.convertToFormat(QImage.Format_Indexed8)
 
     print('Writing line <-> tilemap indexing...')
     with open(script_base + '_index.txt', mode='w') as f:
