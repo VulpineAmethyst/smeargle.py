@@ -88,14 +88,13 @@ formats = {
 def main():
     app = QGuiApplication(sys.argv)
 
-    if len(sys.argv < 3) or sys.argv[2] not in formats.keys():
+    if len(sys.argv) < 3 or sys.argv[2] not in formats.keys():
         print(
             '''Usage: porygon.py image format
 
-            image is an image file in PNG.
+image is an image file in PNG.
 
-            format is one of the supported formats:
-            '''
+format is one of the supported formats:'''
         )
         for format in formats.keys():
             print('* {}'.format(format))
@@ -130,3 +129,6 @@ def main():
             for column in range(columns):
                 tile = data.copy(row * 8, column * 8, 8, 8)
                 f.write(formats[format](tile))
+
+if __name__ == '__main__':
+    main()
