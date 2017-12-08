@@ -46,6 +46,16 @@ This script converts the image into the target format. Run porygon.py without
 arguments to see what formats are available.
 
 Changelog:
+0.3.3
+* Added support for palette maps. Format is, one per line, 'n=m', where n and
+  m must be integers within the colour range for the format.
+
+0.3.2
+* Added Linear 4 bits-per-pixel format.
+
+0.3.1
+* Make supported formats actually work.
+
 0.3.0
 * Added porygon.py script. Linear 1 & 2 and planar 2 bits-per-pixel formats
   are supported.
