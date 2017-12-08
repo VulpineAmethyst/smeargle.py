@@ -80,15 +80,49 @@ def planar2(tile):
 
     return bytes(data)
 
+def linear4(tile):
+    data = bytearray()
+
+    for y in range(8):
+        bp1 = 0
+        bp2 = 0
+        bp3 = 0
+        bp4 = 0
+
+        for x in range(8):
+            pixel = tile.pixelIndex(x, y)
+
+            a = pixel & 0x1
+            b = pixel & 0x2
+            c = pixel & 0x4
+            d = pixel & 0x8
+            if a:
+                bp1 += 2**x
+            if b:
+                bp2 += 2**x
+            if c:
+                bp3 += 2**x
+            if d:
+                bp3 += 2**x
+
+        data.extend((bp1, bp2, bp3, bp4))
+
+    data.reverse()
+
+    return bytes(data)
+
 # Add new formats to this dict as they are implemented.
 formats = {
     '1bpp':    linear1,
     'linear2': linear2,
     'planar2': planar2,
+    'linear4': linear4,
     'nes2':    planar2,
     'gb2':     linear2,
     'snes2':   linear2,
     'gbc2':    linear2,
+    'snes4':   linear4,
+    'pce4':    linear4,
 }
 
 def main():
