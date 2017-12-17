@@ -60,7 +60,6 @@ def planar2(tile, palette):
 
     for y in range(8):
         byte = 0
-        shift = 0
 
         for x in range(4):
             pixel = tile.pixelIndex(x, y)
@@ -75,8 +74,7 @@ def planar2(tile, palette):
         for x in range(4, 8):
             pixel = tile.pixelIndex(x, y)
             pixel &= 0x3
-            byte = byte + (pixel << shift)
-            shift += 2
+            byte = byte + (pixel << x * 2)
 
         data.append(byte)
 
@@ -88,8 +86,6 @@ def linear4(tile, palette):
     for y in range(8):
         bp1 = 0
         bp2 = 0
-        bp3 = 0
-        bp4 = 0
 
         for x in range(8):
             pixel = tile.pixelIndex(x, y)
@@ -98,31 +94,85 @@ def linear4(tile, palette):
 
             a = pixel & 0x1
             b = pixel & 0x2
-            c = pixel & 0x4
-            d = pixel & 0x8
+
             if a:
                 bp1 += 2**(7 - x)
             if b:
                 bp2 += 2**(7 - x)
-            if c:
-                bp3 += 2**(7 - x)
-            if d:
-                bp3 += 2**(7 - x)
 
-        data.extend((bp1, bp2, bp3, bp4))
+        data.extend((bp1, bp2))
+        
+    for y in range(8):
+        bp3 = 0
+        bp4 = 0
+        
+        for x in range(8):
+            pixel = tile.pixelIndex(x,y)
+            a = pixel & 0x4
+            b = pixel & 0x8
+            
+            if a:
+                bp3 += 2**(7-x)
+            if b:
+                bp4 += 2**(7-x)
+        
+        data.extend((bp3,bp4))
+        
+    return bytes(data)
+
+def planar4(tile, palette):
+    data = bytearray()
+
+    for y in range(8):
+        byte = 0
+
+        for x in range(2):
+            pixel = tile.pixelIndex(x, y)
+            if palette is not None:
+                pixel = palette[pixel]
+            pixel &= 0x7
+            byte = byte + (pixel << x * 4)
+
+        data.append(byte)
+        byte = 0
+
+        for x in range(2, 4):
+            pixel = tile.pixelIndex(x, y)
+            pixel &= 0x7
+            byte = byte + (pixel << x * 4)
+
+        data.append(byte)
+        byte = 0
+
+        for x in range(4, 6):
+            pixel = tile.pixelIndex(x, y)
+            pixel &= 0x7
+            byte = byte + (pixel << x * 4)
+
+        data.append(byte)
+        byte = 0
+
+        for x in range(6, 8):
+            pixel = tile.pixelIndex(x, y)
+            pixel &= 0x7
+            byte = byte + (pixel << x * 4)
+
+        data.append(byte)
 
     return bytes(data)
+
 
 # Add new formats to this dict as they are implemented.
 formats = {
     '1bpp':    linear1,
     'linear2': linear2,
     'planar2': planar2,
-    'linear4': linear4,
     'nes2':    planar2,
     'gb2':     linear2,
     'snes2':   linear2,
     'gbc2':    linear2,
+    'linear4': linear4,
+    'planar4': planar4,
     'snes4':   linear4,
     'pce4':    linear4,
 }
