@@ -65,6 +65,7 @@ def main():
         os.mkdir('output')
     script_base = 'output/' + script_base
     output = script_base + '.png'
+    output_full = script_base + '_full.png'
     output_raw = script_base + '.bin'
 
     print('Loading font information...')
@@ -112,6 +113,7 @@ def main():
 
     print('Text rendered. Generating tilemap...')
     tilemap = {}
+    tileset = []
     tilemap_index = {}
     counter_unique = 0
     counter_total  = 0
@@ -135,6 +137,8 @@ def main():
                 tilemap[data] = tile
                 tilemap_index[data] = '0x{:02x}'.format(counter_unique)
                 counter_unique += 1
+
+            tileset.append(tile)
 
             text_tiles.append(tilemap_index[data])
 
@@ -168,6 +172,23 @@ def main():
     print('Saving rendered tilemap...')
     file = QPixmap.fromImage(image)
     file.save(output, 'PNG')
+
+    print('Rendering undeduplicated tiles...')
+    image = QImage(width * 16, ceil(len(tileset) / 16) * height, QImage.Format_RGB32)
+    image.fill(filler)
+    painter.begin(image)
+    (row, column) = (0, 0)
+    for tile in tileset:
+        painter.drawImage(column, row, tile)
+        if column < (width * 15):
+            column += width
+        else:
+            column = 0
+            row += height
+    painter.end()
+    image = image.convertToFormat(QImage.Format_Indexed8)
+    file = QPixmap.fromImage(image)
+    file.save(output_full)
 
 if __name__ == '__main__':
     main()
