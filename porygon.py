@@ -120,6 +120,36 @@ def linear4(tile, palette):
         
     return bytes(data)
 
+def padded4_2(tile, palette):
+    data = bytearray()
+
+    for y in range(8):
+        bp1 = 0
+        bp2 = 0
+
+        for x in range(8):
+            pixel = tile.pixelIndex(x, y)
+            if palette is not None:
+                pixel = palette[pixel]
+
+            a = pixel & 0x1
+            b = pixel & 0x2
+
+            if a:
+                bp1 += 2**(7 - x)
+            if b:
+                bp2 += 2**(7 - x)
+
+        data.extend((bp1, bp2))
+        
+    for y in range(8):
+        bp3 = 0
+        bp4 = 0
+        
+        data.extend((bp3,bp4))
+        
+    return bytes(data)
+
 def planar4(tile, palette):
     data = bytearray()
 
@@ -164,17 +194,18 @@ def planar4(tile, palette):
 
 # Add new formats to this dict as they are implemented.
 formats = {
-    '1bpp':    linear1,
-    'linear2': linear2,
-    'planar2': planar2,
-    'nes2':    planar2,
-    'gb2':     linear2,
-    'snes2':   linear2,
-    'gbc2':    linear2,
-    'linear4': linear4,
-    'planar4': planar4,
-    'snes4':   linear4,
-    'pce4':    linear4,
+    '1bpp':     linear1,
+    'linear2':  linear2,
+    'planar2':  planar2,
+    'nes2':     planar2,
+    'gb2':      linear2,
+    'snes2':    linear2,
+    'gbc2':     linear2,
+    'linear4':  linear4,
+    'planar4':  planar4,
+    'snes4':    linear4,
+    'pce4':     linear4,
+    'padded4_2': padded4_2
 }
 
 def main():
