@@ -4,6 +4,12 @@
     "bits_per_pixel": 2,
     "width":  8,
     "height": 8,
+    "palette": [
+        "008080",
+        "282828",
+        "f8f8f8",
+        "a8a8a8"
+    ],
     "map": {
         " ":  {"index": 115, "width": 4},
         "a":  {"index":   1, "width": 5},
