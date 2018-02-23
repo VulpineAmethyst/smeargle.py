@@ -1,4 +1,4 @@
-Smeargle 0.3.0 readme
+Smeargle 0.4.0 readme
 ---------------------
 Usage: smeargle.py font.json script.txt
 
@@ -6,19 +6,18 @@ font.json is a JSON document which describes the font and provides a mapping
 of characters to font indexes and font widths.
 
 script.txt is a plaintext document without formatting which is rendered as an
-image in both PNG and raw binary formats.
+image in PNG with a limited palette.
 
-Script output
--------------
-The following files are emitted when Smeargle is run:
+Output
+------
+Smeargle outputs three files, at present:
 
-* script.png contains the rendered script with deduplication, formatted
-  compactly. This is provided so that you can use your favourite viewer to
-  inspect the output.
-* script.bin is almost identical to the above; the difference is that it has
-  been converted to your font's bitdepth directly.
-* script_index.txt provides an index mapping which tells you how to index
-  into the rendered tilemap to reproduce the text.
+* <script>_raw.png is the undeduplicated rendering of the script with the
+  specified font.
+* <script>_compressed.png deduplicates tiles to provide the most compact
+  rendering of the font without delving into actual compression algorithms.
+* <script>_index.txt provides a mapping of deduplicated tiles to the original
+  text.
 
 font.json format
 ----------------
@@ -33,6 +32,10 @@ in the map.
     "bits_per_pixel": 2,                  // Depth in bits; 2**n is color count
     "width":  8,                          // Width of a given tile
     "height": 8,                          // Height of a given tile
+    "palette": [                          // A list of colors.
+        '00bbbb',                         // A color in hex format.
+        [0, 0, 0]                         // A color in R,G,B format.
+    ],
     "map": {                              // character -> index & width
         " ":  {"index": 115, "width": 4}, // Must be a blank tile somewher
     }
@@ -45,7 +48,13 @@ Usage: porygon.py image format
 This script converts the image into the target format. Run porygon.py without
 arguments to see what formats are available.
 
-Changelog:
+Changelog
+---------
+0.4.0
+* A complete rewrite of Smeargle to make it more modular.
+* Implemented a palette feature in order to ensure strict palette ordering in
+  the output images.
+
 0.3.3
 * Added support for palette maps. Format is, one per line, 'n=m', where n and
   m must be integers within the colour range for the format.

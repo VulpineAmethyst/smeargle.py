@@ -1,194 +1,227 @@
 #!/usr/bin/env python3
-# Copyright 2018 Kiyoshi Aman
-#
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
-#
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
-# IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-import sys
 import json
-import os.path as op
 from math import ceil
 
-from PyQt5.QtGui import QImage, QPixmap, QPainter, QGuiApplication
+from PyQt5.QtGui import QGuiApplication, QPixmap, QImage, QColor, QPainter
 
-class Font(QPixmap):
-    """A simple class for basic bitmap fonts."""
-    def __init__(self, filename, width=8, height=8):
-        super().__init__(filename)
-        self._width = width
-        self._height = height
+class Font:
+    """A simple class for managing Smeargle's font data."""
+    def __init__(self, filename):
+        """Creates the font object.
 
-        self._tpr = int(self.width() / self._width)
+        Takes a filename pointing at the JSON metadata for a font.
+        """
+        with open(filename, mode='rb') as f:
+            self._json = json.load(f)
 
-    def index(self, tile):
-        row    = int(tile / self._tpr)
-        column = tile % self._tpr
+        self._image = QPixmap(self._json['filename'])
+        self._colors = []
 
-        x = column * self._width
-        y = row * self._height
-        if (x > self.width()) or (y > self.height()):
-            raise KeyError('index')
+        if 'palette' in self._json:
+            for color in self._json['palette']:
+                if isinstance(color, (list, tuple)):
+                    self._colors.append(QColor(*color))
+                elif isinstance(color, str):
+                    red   = int(color[0:2], 16)
+                    green = int(color[2:4], 16)
+                    blue  = int(color[4:6], 16)
+                    self._colors.append(QColor(red, green, blue).rgb())
+                else:
+                    raise ValueError('unsupported color format: {}'.format(color))
+        else:
+            print("WARNING: No palette was provided with this font. Output palette order cannot be guaranteed.")
+            tile = self.index(self.table[' ']['index'])
+            self._colors = [tile.toImage().pixel(0, 0).rgb()]
 
-        return self.copy(x, y, self._width, self._height)
+    def index(self, idx):
+        """Given an index, returns the character at that location in the font.
 
-def main():
-    if len(sys.argv) < 2:
-        print(
-            """Usage: smeargle.py font.json script
+        Please note that this function assumes that even variable-width fonts
+        are stored in a fixed-width grid.
+        """
+        tpr = int(self._image.width() / self.width)
+        row = int(idx / tpr)
+        column = idx % tpr
 
-            font.json is the metadata file associated with the font.
+        x = column * self.width
+        y = row * self.height
 
-            script is the text to be typeset.
+        if (x > self._image.width()) or (y > self._image.height()):
+            raise ValueError('out of bounds: {}'.format(idx))
 
-            The PNG and raw binary outputs will be exported using the script filename
-            as a base. (ex: test.txt -> test.png & test.bin)
-            """
-        )
-        sys.exit(1)
+        return self._image.copy(x, y, self.width, self.height).toImage()
+
+    @property
+    def palette(self):
+        return self._colors
+
+    @property
+    def width(self):
+        return self._json['width']
+
+    @property
+    def height(self):
+        return self._json['height']
+
+    @property
+    def table(self):
+        return self._json['map']
+
+    def length(self, text):
+        return sum(self.table[x]['width'] for x in text)
+
+class Script:
+    def __init__(self, filename):
+        with open(filename, mode='r', encoding='UTF-8') as f:
+            self._text = f.read().split('\n')
+
+        self._painter = QPainter()
+
+    def render_lines(self, font):
+        table = font.table
+        lines = []
+
+        for line in self._text:
+            if len(line) < 1:
+                continue
+            length = font.length(line)
+            length = ceil(length / font.width) * font.width
+            image = QImage(length, font.height, QImage.Format_RGB32)
+            image.fill(font.palette[0])
+            pos = 0
+
+            self._painter.begin(image)
+            for glyph in line:
+                width = font.table[glyph]['width']
+                self._painter.drawImage(pos, 0, font.index(font.table[glyph]['index'] - 1))
+
+                pos += width
+            self._painter.end()
+
+            lines.append((line, image, length, len(lines)))
+
+        return lines
+
+    def generate_tilemap(self, font, lines):
+        tilemap = {}
+        raw_tiles = []
+        compressed_tiles = []
+        map_idx = {}
+        unique = total = 0
+        indexes = []
+
+        for line in lines:
+            (text, image, length, lineno) = line
+            tile_idx = []
+
+            # number of tiles in this line
+            count = int(length / font.width)
+
+            column = 0
+
+            while count > 0:
+                tile = image.copy(column, 0, font.width, font.height)
+                if len(font.palette) > 1:
+                    tile = tile.convertToFormat(QImage.Format_Indexed8, font.palette)
+                else:
+                    tile = tile.convertToFormat(QImage.Format_Indexed8)
+                data = bytearray()
+
+                for y in range(tile.height()):
+                    for x in range(tile.width()):
+                        data.append(tile.pixelIndex(x, y))
+
+                data = bytes(data)
+
+                if data not in tilemap.keys():
+                    tilemap[data] = tile
+                    compressed_tiles.append(tile)
+                    map_idx[data] = '0x{:02x}'.format(unique)
+                    unique += 1
+
+                raw_tiles.append(tile)
+                tile_idx.append(map_idx[data])
+                total += 1
+                column += font.width
+                count -= 1
+
+            indexes.append((text, ' '.join(tile_idx)))
+        return (compressed_tiles, raw_tiles, map_idx, indexes, total, unique)
+
+    def render_tiles(self, font, tiles):
+        image = QImage(font.width * 16, ceil(len(tiles) / 16) * font.height, QImage.Format_RGB32)
+        image.fill(font.palette[0])
+
+        (row, column) = (0, 0)
+
+        self._painter.begin(image)
+        for tile in tiles:
+            self._painter.drawImage(column, row, tile)
+
+            if column < (font.width * 15):
+                column += font.width
+            else:
+                column = 0
+                row += font.height
+        self._painter.end()
+
+        if len(font.palette) > 1:
+            return image.convertToFormat(QImage.Format_Indexed8, font.palette)
+        else:
+            return image.convertToFormat(QImage.Format_Indexed8)
+
+    def render_tiles_to_file(self, font, tiles, filename):
+        self.render_tiles(font, tiles).save(filename, 'PNG')
+
+if __name__ == '__main__':
+    import sys
+    import os.path
 
     app = QGuiApplication(sys.argv)
 
-    (font, script) = sys.argv[1:3]
-    font_info = None
-    script_base, ext = op.splitext(script)
-    if not op.exists('output/'):
-        import os
-        os.mkdir('output')
-    script_base = 'output/' + script_base
-    output = script_base + '.png'
-    output_full = script_base + '_full.png'
-    output_raw = script_base + '.bin'
+    font   = sys.argv[1]
+    script = sys.argv[2]
+    render_path = sys.argv[3] if len(sys.argv) > 3 else 'output'
 
-    print('Loading font information...')
-    with open(font, mode='rb') as f:
-        font_info = json.load(f)
+    filebase = os.path.split(script)[-1]
+    name, ext = os.path.splitext(filebase)
 
-    print('Loading font data...')
-    font_data = Font(font_info['filename'], font_info['width'], font_info['height'])
+    output_raw  = os.path.join(render_path, name + '_raw.png')
+    output_comp = os.path.join(render_path, name + '_compressed.png')
+    output_map  = os.path.join(render_path, name + '_index.txt')
 
-    print('Loading text...')
-    with open(script, mode='r', encoding='utf-8', errors='replace') as f:
-        text = f.read()
+    print("Loading font...", end='')
+    font = Font(font)
+    print("done.")
 
-    images = []
-    fmap = font_info['map']
-    width = font_info['width']
-    height = font_info['height']
-    line = 0
-    lines = text.split('\n')
-    painter = QPainter()
-    filler = font_data.index(fmap[' ']['index']).toImage().pixel(0, 0)
+    print("Loading script...", end='')
+    script = Script(script)
+    print("done.")
 
-    print('Rendering text...')
-    scriptmap = {}
-    while len(images) < text.count('\n'):
-        position = 0
+    print("Rendering text...", end='')
+    lines = script.render_lines(font)
+    print("done.")
 
-        temp = QImage(width * len(lines[line]), height, QImage.Format_RGB32)
-        temp.fill(filler)
+    print("Generating tilemap...", end='')
+    (compressed, raw, map_index, indexes, total, unique) = script.generate_tilemap(font, lines)
+    print("{} tiles generated, {} unique.".format(total, unique))
 
-        painter.begin(temp)
-        for char in lines[line]:
-            if char in fmap.keys():
-                glyph = font_data.index(fmap[char]['index'] - 1)
-                painter.drawImage(position, 0, glyph.toImage())
-                painter.save()
-                position += fmap[char]['width']
-            else:
-                print('WARNING: unknown glyph "{}"'.format(char))
-        painter.end()
-        temp = temp.copy(0, 0, ceil(position / width) * width, height)
-        images.append(temp)
-        scriptmap[lines[line]] = temp
-        line += 1
+    print('Writing compressed tiles...', end='')
+    script.render_tiles_to_file(font, compressed, output_comp)
+    print('done.')
 
-    print('Text rendered. Generating tilemap...')
-    tilemap = {}
-    tileset = []
-    tilemap_index = {}
-    counter_unique = 0
-    counter_total  = 0
-    for line, image in scriptmap.items():
-        iwidth = image.width()
-        tiles = int(iwidth / width)
-        column = 0
-        text_tiles = []
+    print('Writing raw tiles...', end='')
+    script.render_tiles_to_file(font, raw, output_raw)
+    print('done.')
 
-        while tiles > 0:
-            tile = image.copy(column, 0, width, height).convertToFormat(QImage.Format_Indexed8)
-            data = bytearray()
+    print('Writing map index...', end='')
+    with open(output_map, mode='wt') as f:
+        for text, index in indexes:
+            f.write('{} = {}\n'.format(text, index))
+    print('done.')
 
-            for y in range(tile.height()):
-                for x in range(tile.width()):
-                    data.append(tile.pixelIndex(x, y))
-
-            data = bytes(data)
-
-            if data not in tilemap.keys():
-                tilemap[data] = tile
-                tilemap_index[data] = '0x{:02x}'.format(counter_unique)
-                counter_unique += 1
-
-            tileset.append(tile)
-
-            text_tiles.append(tilemap_index[data])
-
-            counter_total += 1
-
-            column += width
-            tiles -= 1
-
-        scriptmap[line] = text_tiles
-
-    print('Tilemap generated, with {} tiles mapped ({} unique). Rendering tilemap...'.format(counter_total, counter_unique))
-    image = QImage(width * 16, ceil(len(tilemap.keys()) / 16) * height, QImage.Format_RGB32)
-    image.fill(filler)
-    painter.begin(image)
-    (row, column) = (0, 0)
-    for data, tile in tilemap.items():
-        painter.drawImage(column, row, tile)
-        if column < (width * 16 - width):
-            column += width
-        else:
-            column = 0
-            row += height
-    painter.end()
-    image = image.convertToFormat(QImage.Format_Indexed8)
-
-    print('Writing line <-> tilemap indexing...')
-    with open(script_base + '_index.txt', mode='w') as f:
-        for line, index in scriptmap.items():
-            f.write('{} -> {}\n'.format(line, ', '.join(index)))
-
-    print('Saving rendered tilemap...')
-    file = QPixmap.fromImage(image)
-    file.save(output, 'PNG')
-
-    print('Rendering undeduplicated tiles...')
-    image = QImage(width * 16, ceil(len(tileset) / 16) * height, QImage.Format_RGB32)
-    image.fill(filler)
-    painter.begin(image)
-    (row, column) = (0, 0)
-    for tile in tileset:
-        painter.drawImage(column, row, tile)
-        if column < (width * 15):
-            column += width
-        else:
-            column = 0
-            row += height
-    painter.end()
-    image = image.convertToFormat(QImage.Format_Indexed8)
-    file = QPixmap.fromImage(image)
-    file.save(output_full)
-
-if __name__ == '__main__':
-    main()
+    print()
+    print('Raw tiles:   ', output_raw)
+    print('Compressed:  ', output_comp)
+    print('Tile<->text: ', output_map)
