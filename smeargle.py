@@ -177,6 +177,11 @@ class Script:
 if __name__ == '__main__':
     import sys
     import os.path
+    
+    if len(sys.argv) < 1:
+        print('Usage: smeargle.py font.json script.txt')
+        print('\nPlease see the included readme.txt for documentation on the font metadata.')
+        sys.exit(-1)
 
     app = QGuiApplication(sys.argv)
 
