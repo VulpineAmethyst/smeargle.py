@@ -92,7 +92,7 @@ class Script:
             if max_tiles > 0 and length > max_tiles:
                 print('WARNING: "{}" exceeds {} tiles by {}px; truncating.'.format(
                     line,
-                    max_tiles,
+                    int(max_tiles / font.width),
                     length - max_tiles
                 ))
                 length = max_tiles
@@ -193,10 +193,10 @@ class Game:
         self._fonts = {}
         self._scripts = {}
 
-        for name, file in self._data['fonts']:
+        for name, file in self._data['fonts'].items():
             self._fonts[name] = Font(file)
 
-        for script, data in self._data['scripts']:
+        for script, data in self._data['scripts'].items():
             if 'max_tiles_per_line' not in data:
                 data['max_tiles_per_line'] = 0
             self._scripts[script] = (
@@ -225,9 +225,9 @@ class Game:
 
         script, font = self._scripts[script]
 
-        if output: print('Rendering text...', end='')
+        if output: print('Rendering text...')
         lines = script.render_lines(font)
-        if output: print('done.')
+        if output: print('Text rendered.')
 
         if output: print("Generating tilemap...", end='')
         (compressed, raw, map_index, indexes, total, unique) = script.generate_tilemap(font, lines)
@@ -269,12 +269,9 @@ if __name__ == '__main__':
     game = Game(sys.argv[1])
     print('done.')
 
-    for script in game.scripts():
+    for script in game.scripts:
         print('Processing {}...'.format(script))
         game.render_script(script, output=True)
         print('{} processed.'.format(script))
 
-        print("Rendering text...", end='')
-        lines = script.render_lines(font)
-        print("done.")
 
