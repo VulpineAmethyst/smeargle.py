@@ -72,7 +72,8 @@ class Font:
         return sum(self.table[x]['width'] for x in text)
 
 class Script:
-    def __init__(self, filename):
+    def __init__(self, filename, max_tiles=0):
+        self.max_tiles = max_tiles
         with open(filename, mode='r', encoding='UTF-8') as f:
             self._text = f.read().split('\n')
 
@@ -81,12 +82,20 @@ class Script:
     def render_lines(self, font):
         table = font.table
         lines = []
+        max_tiles = self.max_tiles * font.width
 
         for line in self._text:
             if len(line) < 1:
                 continue
             length = font.length(line)
             length = ceil(length / font.width) * font.width
+            if max_tiles > 0 and length > max_tiles:
+                print('WARNING: "{}" exceeds {} tiles by {}px; truncating.'.format(
+                    line,
+                    max_tiles,
+                    length - max_tiles
+                ))
+                length = max_tiles
             image = QImage(length, font.height, QImage.Format_RGB32)
             image.fill(font.palette[0])
             pos = 0
@@ -94,6 +103,8 @@ class Script:
             self._painter.begin(image)
             for glyph in line:
                 width = font.table[glyph]['width']
+                if pos + width >= max_tiles:
+                    break
                 self._painter.drawImage(pos, 0, font.index(font.table[glyph]['index'] - 1))
 
                 pos += width
@@ -174,59 +185,96 @@ class Script:
     def render_tiles_to_file(self, font, tiles, filename):
         self.render_tiles(font, tiles).save(filename, 'PNG')
 
+class Game:
+    def __init__(self, filename):
+        with open(filename, mode='rb') as f:
+            self._data = json.load(f)
+
+        self._fonts = {}
+        self._scripts = {}
+
+        for name, file in self._data['fonts']:
+            self._fonts[name] = Font(file)
+
+        for script, data in self._data['scripts']:
+            if 'max_tiles_per_line' not in data:
+                data['max_tiles_per_line'] = 0
+            self._scripts[script] = (
+                Script(script, data['max_tiles_per_line']),
+                self._fonts[data['font']]
+            )
+
+    @property
+    def fonts(self):
+        return tuple(self._fonts.keys())
+
+    @property
+    def scripts(self):
+        return tuple(self._scripts.keys())
+
+    def render_script(self, script, output=False):
+        if script not in self._scripts.keys():
+            raise KeyError('unknown script')
+
+        filebase = os.path.split(script)[-1]
+        name, ext = os.path.splitext(filebase)
+
+        output_raw  = os.path.join(render_path, name + '_raw.png')
+        output_comp = os.path.join(render_path, name + '_compressed.png')
+        output_map  = os.path.join(render_path, name + '_index.txt')
+
+        script, font = self._scripts[script]
+
+        if output: print('Rendering text...', end='')
+        lines = script.render_lines(font)
+        if output: print('done.')
+
+        if output: print("Generating tilemap...", end='')
+        (compressed, raw, map_index, indexes, total, unique) = script.generate_tilemap(font, lines)
+        if output: print("{} tiles generated, {} unique.".format(total, unique))
+
+        if output: print('Writing compressed tiles...', end='')
+        script.render_tiles_to_file(font, compressed, output_comp)
+        if output: print('done.')
+
+        if output: print('Writing raw tiles...', end='')
+        script.render_tiles_to_file(font, raw, output_raw)
+        if output: print('done.')
+
+        if output: print('Writing map index...', end='')
+        with open(output_map, mode='wt') as f:
+            for text, index in indexes:
+                f.write('{} = {}\n'.format(text, index))
+        if output: print('done.')
+
+        if output:
+            print()
+            print('Raw tiles:   ', output_raw)
+            print('Compressed:  ', output_comp)
+            print('Tile<->text: ', output_map)
+
 if __name__ == '__main__':
     import sys
     import os.path
     
     if len(sys.argv) < 1:
-        print('Usage: smeargle.py font.json script.txt')
-        print('\nPlease see the included readme.txt for documentation on the font metadata.')
+        print('Usage: smeargle.py game.json [output_directory]')
+        print('\nPlease see the included readme.txt for documentation on file formats.')
         sys.exit(-1)
 
     app = QGuiApplication(sys.argv)
+    render_path = sys.argv[2] if len(sys.argv) > 2 else 'output'
 
-    font   = sys.argv[1]
-    script = sys.argv[2]
-    render_path = sys.argv[3] if len(sys.argv) > 3 else 'output'
-
-    filebase = os.path.split(script)[-1]
-    name, ext = os.path.splitext(filebase)
-
-    output_raw  = os.path.join(render_path, name + '_raw.png')
-    output_comp = os.path.join(render_path, name + '_compressed.png')
-    output_map  = os.path.join(render_path, name + '_index.txt')
-
-    print("Loading font...", end='')
-    font = Font(font)
-    print("done.")
-
-    print("Loading script...", end='')
-    script = Script(script)
-    print("done.")
-
-    print("Rendering text...", end='')
-    lines = script.render_lines(font)
-    print("done.")
-
-    print("Generating tilemap...", end='')
-    (compressed, raw, map_index, indexes, total, unique) = script.generate_tilemap(font, lines)
-    print("{} tiles generated, {} unique.".format(total, unique))
-
-    print('Writing compressed tiles...', end='')
-    script.render_tiles_to_file(font, compressed, output_comp)
+    print('Loading game data from {}...'.format(sys.argv[1]), end='')
+    game = Game(sys.argv[1])
     print('done.')
 
-    print('Writing raw tiles...', end='')
-    script.render_tiles_to_file(font, raw, output_raw)
-    print('done.')
+    for script in game.scripts():
+        print('Processing {}...'.format(script))
+        game.render_script(script, output=True)
+        print('{} processed.'.format(script))
 
-    print('Writing map index...', end='')
-    with open(output_map, mode='wt') as f:
-        for text, index in indexes:
-            f.write('{} = {}\n'.format(text, index))
-    print('done.')
+        print("Rendering text...", end='')
+        lines = script.render_lines(font)
+        print("done.")
 
-    print()
-    print('Raw tiles:   ', output_raw)
-    print('Compressed:  ', output_comp)
-    print('Tile<->text: ', output_map)

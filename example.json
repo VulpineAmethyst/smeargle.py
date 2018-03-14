@@ -1,0 +1,11 @@
+{
+    "name": "Example",
+    "fonts": {
+        "Melissa 8": "melissa8.json"
+    }, "scripts": {
+        "test.txt": {
+            "max_tiles_per_line": 8,
+            "font": "Melissa 8"
+        }
+    }
+}

@@ -1,16 +1,12 @@
 Smeargle 0.4.0 readme
 ---------------------
-Usage: smeargle.py font.json script.txt
+Usage: smeargle.py game.json
 
-font.json is a JSON document which describes the font and provides a mapping
-of characters to font indexes and font widths.
-
-script.txt is a plaintext document without formatting which is rendered as an
-image in PNG with a limited palette.
+game.json is a file which follows the Game JSON format outlined below.
 
 Output
 ------
-Smeargle outputs three files, at present:
+Smeargle outputs three files per script, at present:
 
 * <script>_raw.png is the undeduplicated rendering of the script with the
   specified font.
@@ -19,12 +15,31 @@ Smeargle outputs three files, at present:
 * <script>_index.txt provides a mapping of deduplicated tiles to the original
   text.
 
+game.json format
+----------------
+The following format MUST be observed, or you will not get the output you want.
+Remove '//' and everything following it in each line if you plan to cop/paste
+this example for your own use. Do not leave a trailing comma on the final entry
+in each object or array.
+
+{
+    "name": "Example",                // The name of the game, for reference.
+    "fonts": {
+        "Melissa 8": "melissa8.json"  // Font name and its filename.
+    }, "scripts": {
+        "test.txt": {                 // Script filename.
+            "max_tiles_per_line": 8,  // Omit or set to 0 for unlimited tiles.
+            "font": "Melissa 8"       // Reference to the font table, above.
+        }
+    }
+}
+
 font.json format
 ----------------
 The following format MUST be observed, or you will not get the output you want.
 Remove '//' and everything following it in each line if you plan to copy/paste
 this example for your own use. Do not leave a trailing comma on the final entry
-in the map.
+in each object or array.
 
 {
     "font_name": "Example",               // Human-readable, not currently used
@@ -37,9 +52,11 @@ in the map.
         [0, 0, 0]                         // A color in R,G,B format.
     ],
     "map": {                              // character -> index & width
-        " ":  {"index": 115, "width": 4}, // Must be a blank tile somewher
+        " ":  {"index": 115, "width": 4}, // Must be a blank tile somewhere
     }
 }
+
+The first color in the palette is assumed to be the background color.
 
 porygon.py
 ----------
@@ -50,6 +67,12 @@ arguments to see what formats are available.
 
 Changelog
 ---------
+0.5.0
+* Introduce a master 'game.json' file in order to enable batch processing, for
+  games which use multiple scripts that have different fonts or rendering
+  requirements.
+* Emit an error if no arguments are given.
+
 0.4.0
 * A complete rewrite of Smeargle to make it more modular.
 * Implemented a palette feature in order to ensure strict palette ordering in
