@@ -212,7 +212,7 @@ class Game:
     def scripts(self):
         return tuple(self._scripts.keys())
 
-    def render_script(self, script, output=False):
+    def render_script(self, script, render_path, output=False):
         if script not in self._scripts.keys():
             raise KeyError('unknown script')
 
@@ -271,7 +271,7 @@ if __name__ == '__main__':
 
     for script in game.scripts:
         print('Processing {}...'.format(script))
-        game.render_script(script, output=True)
+        game.render_script(script, render_path, output=True)
         print('{} processed.'.format(script))
 
 
