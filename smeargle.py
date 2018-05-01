@@ -255,7 +255,7 @@ class Game:
 
 if __name__ == '__main__':
     import sys
-    import os.path
+    import os
     
     if len(sys.argv) < 1:
         print('Usage: smeargle.py game.json [output_directory]')
@@ -264,6 +264,8 @@ if __name__ == '__main__':
 
     app = QGuiApplication(sys.argv)
     render_path = sys.argv[2] if len(sys.argv) > 2 else 'output'
+    if not os.path.exists(render_path):
+        os.mkdir(render_path, mode=0o644)
 
     print('Loading game data from {}...'.format(sys.argv[1]), end='')
     game = Game(sys.argv[1])
