@@ -69,6 +69,7 @@ class Font:
         return self._json['map']
 
     def length(self, text):
+        """Calculate the pixel-wise length of the given string."""
         return sum(self.table[x]['width'] for x in text)
 
 class Script:
