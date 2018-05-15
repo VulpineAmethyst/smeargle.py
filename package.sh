@@ -3,7 +3,7 @@
 DIR="smeargle-$1"
 
 mkdir ${DIR}
-cp smeargle.py porygon.py readme.txt melissa8.{png,json} test.txt ${DIR}
+cp smeargle.py porygon.py readme.txt melissa8.{png,json} test.txt example.json ${DIR}
 COPYFILE_DISABLE=1 tar cf ${DIR}.tar.bz2 ${DIR}
 rm -r ${DIR}
 
