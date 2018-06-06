@@ -73,8 +73,10 @@ class Font:
         return sum(self.table[x]['width'] for x in text)
 
 class Script:
-    def __init__(self, filename, max_tiles=0):
+    def __init__(self, filename, max_tiles=0, atlas=False, tile_offset=0):
         self.max_tiles = max_tiles
+        self.atlas = atlas
+        self.tile_offset = tile_offset
         with open(filename, mode='r', encoding='UTF-8') as f:
             self._text = f.read().split('\n')
 
@@ -200,8 +202,15 @@ class Game:
         for script, data in self._data['scripts'].items():
             if 'max_tiles_per_line' not in data:
                 data['max_tiles_per_line'] = 0
+            if 'atlas' not in data:
+                data['atlas'] = False
+            if 'tile_offset' not in data:
+                data['tile_offset'] = 0
             self._scripts[script] = (
-                Script(script, data['max_tiles_per_line']),
+                Script(filename=script,
+                       max_tiles=data['max_tiles_per_line'],
+                       atlas=data['atlas'],
+                       tile_offset=data['tile_offset']),
                 self._fonts[data['font']]
             )
 
