@@ -85,7 +85,6 @@ Changelog
 ** raw_fn: Filename for raw tile graphic png output.
 ** deduped_fn: Filename for compressed tile graphic png output.
 ** tilemap_fn: Filename for text index tilemap file.
-* Emit an error if no arguments are given.
 
 0.5.0
 * Introduce a master 'game.json' file in order to enable batch processing, for
