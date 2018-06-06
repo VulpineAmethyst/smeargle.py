@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import json
-from math import ceil
+from math import ceil, floor
 
 from PyQt5.QtGui import QGuiApplication, QPixmap, QImage, QColor, QPainter
 
 
 class Font:
     """A simple class for managing Smeargle's font data."""
+
     def __init__(self, filename):
         """Creates the font object.
 
@@ -75,10 +76,15 @@ class Font:
 
 
 class Script:
-    def __init__(self, filename, max_tiles=0, atlas=False, tile_offset=0):
+    def __init__(self, filename, raw_fn=None, deduped_fn=None, tilemap_fn=None,
+                 max_tiles=0, output_format=None, tile_offset=0, leading_zeroes=False):
         self.max_tiles = max_tiles
-        self.atlas = atlas
+        self.output_format = output_format
         self.tile_offset = tile_offset
+        self.leading_zeroes = leading_zeroes
+        self.raw_fn = raw_fn
+        self.deduped_fn = deduped_fn
+        self.tilemap_fn = tilemap_fn
         with open(filename, mode='r', encoding='UTF-8') as f:
             self._text = f.read().split('\n')
 
@@ -119,8 +125,7 @@ class Script:
 
         return lines
 
-    @staticmethod
-    def generate_tilemap(font, lines):
+    def generate_tilemap(self, font, lines):
         tilemap = {}
         raw_tiles = []
         compressed_tiles = []
@@ -154,7 +159,27 @@ class Script:
                 if data not in tilemap.keys():
                     tilemap[data] = tile
                     compressed_tiles.append(tile)
-                    map_idx[data] = '0x{:02x}'.format(unique)
+                    if self.output_format == 'atlas':
+                        index = unique + self.tile_offset
+                        upper_val = int(floor(index / 256))
+                        lower_val = int(index % 256)
+                        if upper_val > 0 or self.leading_zeroes is True:
+                            map_idx[data] = "<${:02x}><${:02x}>".format(upper_val, lower_val)
+                        else:
+                            map_idx[data] = "<${:02x}>".format(lower_val)
+                    elif self.output_format == 'thingy':
+                        index = unique + self.tile_offset
+                        upper_val = int(floor(index / 256))
+                        lower_val = int(index % 256)
+                        if upper_val > 0 or self.leading_zeroes is True:
+                            map_idx[data] = "{:02x}{:02x}".format(upper_val, lower_val)
+                        else:
+                            map_idx[data] = "{:02x}".format(lower_val)
+                    else:
+                        if self.leading_zeroes:
+                            map_idx[data] = '0x{:04x}'.format(unique + self.tile_offset)
+                        else:
+                            map_idx[data] = '0x{:02x}'.format(unique + self.tile_offset)
                     unique += 1
 
                 raw_tiles.append(tile)
@@ -163,7 +188,10 @@ class Script:
                 column += font.width
                 count -= 1
 
-            indexes.append((text, ' '.join(tile_idx)))
+            if self.output_format is None:
+                indexes.append((text, ' '.join(tile_idx)))
+            else:
+                indexes.append((text, ''.join(tile_idx)))
         return compressed_tiles, raw_tiles, map_idx, indexes, total, unique
 
     def render_tiles(self, font, tiles):
@@ -203,18 +231,36 @@ class Game:
         for name, file in self._data['fonts'].items():
             self._fonts[name] = Font(file)
 
+        valid_formats = ['thingy', 'atlas', None]
+        defaults = {
+            'max_tiles_per_line': 0,
+            'output_format': None,
+            'tile_offset': 0,
+            'leading_zeroes': False,
+            'raw_fn': None,
+            'deduped_fn': None,
+            'tilemap_fn': None
+        }
+
         for script, data in self._data['scripts'].items():
-            if 'max_tiles_per_line' not in data:
-                data['max_tiles_per_line'] = 0
-            if 'atlas' not in data:
-                data['atlas'] = False
-            if 'tile_offset' not in data:
-                data['tile_offset'] = 0
+
+            # Add defaults to script data if not present
+            for k, v in defaults.items():
+                if k not in data:
+                    data[k] = v
+
+            if data['output_format'] not in valid_formats:
+                raise ValueError("output_format must be one of {} or omitted entirely".format(valid_formats[:-1]))
+
             self._scripts[script] = (
                 Script(filename=script,
+                       raw_fn=data['raw_fn'],
+                       deduped_fn=data['deduped_fn'],
+                       tilemap_fn=data['tilemap_fn'],
                        max_tiles=data['max_tiles_per_line'],
-                       atlas=data['atlas'],
-                       tile_offset=data['tile_offset']),
+                       output_format=data['output_format'],
+                       tile_offset=data['tile_offset'],
+                       leading_zeroes=data['leading_zeroes']),
                 self._fonts[data['font']]
             )
 
@@ -233,11 +279,22 @@ class Game:
         filebase = os.path.split(script)[-1]
         name, ext = os.path.splitext(filebase)
 
-        output_raw  = os.path.join(render_path, name + '_raw.png')
-        output_comp = os.path.join(render_path, name + '_compressed.png')
-        output_map  = os.path.join(render_path, name + '_index.txt')
-
         script, font = self._scripts[script]
+
+        if script.raw_fn is None:
+            output_raw = os.path.join(render_path, name + '_raw.png')
+        else:
+            output_raw = os.path.join(render_path, script.raw_fn)
+
+        if script.deduped_fn is None:
+            output_comp = os.path.join(render_path, name + '_compressed.png')
+        else:
+            output_comp = os.path.join(render_path, script.deduped_fn)
+
+        if script.tilemap_fn is None:
+            output_map = os.path.join(render_path, name + '_index.txt')
+        else:
+            output_map = os.path.join(render_path, script.tilemap_fn)
 
         if output: print('Rendering text...')
         lines = script.render_lines(font)
@@ -258,7 +315,10 @@ class Game:
         if output: print('Writing map index...', end='')
         with open(output_map, mode='wt') as f:
             for text, index in indexes:
-                f.write('{} = {}\n'.format(text, index))
+                if script.output_format == 'thingy':
+                    f.write('{}={}\n'.format(index, text))
+                else:
+                    f.write('{} = {}\n'.format(text, index))
         if output: print('done.')
 
         if output:
@@ -271,7 +331,7 @@ class Game:
 if __name__ == '__main__':
     import sys
     import os
-    
+
     if len(sys.argv) < 1:
         print('Usage: smeargle.py game.json [output_directory]')
         print('\nPlease see the included readme.txt for documentation on file formats.')
