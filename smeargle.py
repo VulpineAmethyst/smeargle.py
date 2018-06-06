@@ -5,6 +5,7 @@ from math import ceil
 
 from PyQt5.QtGui import QGuiApplication, QPixmap, QImage, QColor, QPainter
 
+
 class Font:
     """A simple class for managing Smeargle's font data."""
     def __init__(self, filename):
@@ -72,6 +73,7 @@ class Font:
         """Calculate the pixel-wise length of the given string."""
         return sum(self.table[x]['width'] for x in text)
 
+
 class Script:
     def __init__(self, filename, max_tiles=0, atlas=False, tile_offset=0):
         self.max_tiles = max_tiles
@@ -92,7 +94,7 @@ class Script:
                 continue
             length = font.length(line)
             length = ceil(length / font.width) * font.width
-            if max_tiles > 0 and length > max_tiles:
+            if 0 < max_tiles < length:
                 print('WARNING: "{}" exceeds {} tiles by {}px; truncating.'.format(
                     line,
                     int(max_tiles / font.width),
@@ -117,7 +119,8 @@ class Script:
 
         return lines
 
-    def generate_tilemap(self, font, lines):
+    @staticmethod
+    def generate_tilemap(font, lines):
         tilemap = {}
         raw_tiles = []
         compressed_tiles = []
@@ -161,7 +164,7 @@ class Script:
                 count -= 1
 
             indexes.append((text, ' '.join(tile_idx)))
-        return (compressed_tiles, raw_tiles, map_idx, indexes, total, unique)
+        return compressed_tiles, raw_tiles, map_idx, indexes, total, unique
 
     def render_tiles(self, font, tiles):
         image = QImage(font.width * 16, ceil(len(tiles) / 16) * font.height, QImage.Format_RGB32)
@@ -187,6 +190,7 @@ class Script:
 
     def render_tiles_to_file(self, font, tiles, filename):
         self.render_tiles(font, tiles).save(filename, 'PNG')
+
 
 class Game:
     def __init__(self, filename):
@@ -263,6 +267,7 @@ class Game:
             print('Compressed:  ', output_comp)
             print('Tile<->text: ', output_map)
 
+
 if __name__ == '__main__':
     import sys
     import os
@@ -285,5 +290,3 @@ if __name__ == '__main__':
         print('Processing {}...'.format(script))
         game.render_script(script, render_path, output=True)
         print('{} processed.'.format(script))
-
-
