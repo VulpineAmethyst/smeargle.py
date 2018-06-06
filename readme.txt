@@ -1,4 +1,4 @@
-Smeargle 0.4.0 readme
+Smeargle 0.6.0 readme
 ---------------------
 Usage: smeargle.py game.json
 
@@ -15,6 +15,9 @@ Smeargle outputs three files per script, at present:
 * <script>_index.txt provides a mapping of deduplicated tiles to the original
   text.
 
+These filenames can be configured on an individual script basis; see game.json
+documentation below.
+
 game.json format
 ----------------
 The following format MUST be observed, or you will not get the output you want.
@@ -23,13 +26,19 @@ this example for your own use. Do not leave a trailing comma on the final entry
 in each object or array.
 
 {
-    "name": "Example",                // The name of the game, for reference.
+    "name": "Example",                    // The name of the game, for reference.
     "fonts": {
-        "Melissa 8": "melissa8.json"  // Font name and its filename.
+        "Melissa 8": "melissa8.json"       // Font name and its filename.
     }, "scripts": {
-        "test.txt": {                 // Script filename.
-            "max_tiles_per_line": 8,  // Omit or set to 0 for unlimited tiles.
-            "font": "Melissa 8"       // Reference to the font table, above.
+        "test.txt": {                      // Script filename.
+            "font": "Melissa 8",           // Reference to the font table, above.
+            "max_tiles_per_line": 8,       // Optional: set to 0 for unlimited tiles.
+            "output_format": "thingy",     // Optional: Output format for tilemap. "thingy", "atlas"
+            "leading_zeroes": true,        // Optional: Forces 16-bit tilemap output (i.e. 0x0012 instead of 0x12)
+            "tile_offset": 256,            // Optional: Constant to add to tile index (first tile: 0x0000 + 256 = 0x0100)
+            "raw_fn": "ex_raw.png",        // Optional: Output filename for raw graphic tile data.
+            "deduped_fn": "ex_comp.png",   // Optional: Output filename for deduped tile data.
+            "tilemap_fn": "example.tbl"    // Optional: Output filename for tilemap text.
         }
     }
 }
@@ -67,6 +76,16 @@ arguments to see what formats are available.
 
 Changelog
 ---------
+0.6.0
+* Adds several optional arguments to script json elements:
+** output_format: determines how the tilemap text file gets rendered. Possible values are "atlas", "thingy", null
+** leading_zeroes: Forces tilemap output to always be 16-bit.
+** tile_offset: Adds a constant value to the tile index.
+                Useful if you want the tilemap to start counting somewhere other than zero.
+** raw_fn: Filename for raw tile graphic png output.
+** deduped_fn: Filename for compressed tile graphic png output.
+** tilemap_fn: Filename for text index tilemap file.
+
 0.5.0
 * Introduce a master 'game.json' file in order to enable batch processing, for
   games which use multiple scripts that have different fonts or rendering
