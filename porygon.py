@@ -18,6 +18,7 @@ import os.path as op
 
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QGuiApplication
 
+
 def linear1(tile, *args):
     data = bytearray()
 
@@ -31,6 +32,7 @@ def linear1(tile, *args):
         data.append(byte)
 
     return bytes(data)
+
 
 def linear2(tile, palette):
     data = bytearray()
@@ -54,6 +56,7 @@ def linear2(tile, palette):
         data.extend((bp1, bp2))
 
     return bytes(data)
+
 
 def planar2(tile, palette):
     data = bytearray()
@@ -79,6 +82,7 @@ def planar2(tile, palette):
         data.append(byte)
 
     return bytes(data)
+
 
 def linear4(tile, palette):
     data = bytearray()
@@ -107,7 +111,7 @@ def linear4(tile, palette):
         bp4 = 0
         
         for x in range(8):
-            pixel = tile.pixelIndex(x,y)
+            pixel = tile.pixelIndex(x, y)
             a = pixel & 0x4
             b = pixel & 0x8
             
@@ -116,9 +120,10 @@ def linear4(tile, palette):
             if b:
                 bp4 += 2**(7-x)
         
-        data.extend((bp3,bp4))
+        data.extend((bp3, bp4))
         
     return bytes(data)
+
 
 def padded4_2(tile, palette):
     data = bytearray()
@@ -146,9 +151,10 @@ def padded4_2(tile, palette):
         bp3 = 0
         bp4 = 0
         
-        data.extend((bp3,bp4))
+        data.extend((bp3, bp4))
         
     return bytes(data)
+
 
 def planar4(tile, palette):
     data = bytearray()
@@ -208,6 +214,7 @@ formats = {
     'padded4_2': padded4_2
 }
 
+
 def main():
     app = QGuiApplication(sys.argv)
 
@@ -220,11 +227,11 @@ mapper in order to force palette modifications.
 
 format is one of the supported formats:'''
         )
-        for format in formats.keys():
-            print('* {}'.format(format))
+        for fmt in formats.keys():
+            print('* {}'.format(fmt))
         sys.exit(1)
 
-    (image, format) = sys.argv[1:3]
+    (image, fmt) = sys.argv[1:3]
     (image_base, ext) = op.splitext(image)
     output = '{}.bin'.format(image_base)
     mapper = image_base + '.txt'
@@ -235,7 +242,7 @@ format is one of the supported formats:'''
     if not output.startswith('output/'):
         output = 'output/{}'.format(output)
 
-    bpp = int(format[-1])
+    bpp = int(fmt[-1])
 
     print('Loading image...')
     data = QImage(image)
@@ -266,14 +273,15 @@ format is one of the supported formats:'''
         print('No palette found.')
         palette = None
 
-    print('Converting to {}'.format(format))
+    print('Converting to {}'.format(fmt))
     counter = 0
     with open(output, mode='wb') as f:
         for row in range(rows):
             for column in range(columns):
                 tile = data.copy(column * 8, row * 8, 8, 8)
-                f.write(formats[format](tile, palette))
+                f.write(formats[fmt](tile, palette))
                 counter += 1
+
 
 if __name__ == '__main__':
     main()
