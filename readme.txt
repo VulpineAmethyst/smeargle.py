@@ -1,4 +1,4 @@
-Smeargle 0.6.0 readme
+Smeargle 0.7.0 readme
 ---------------------
 Usage: smeargle.py game.json
 
@@ -33,6 +33,7 @@ in each object or array.
         "test.txt": {                      // Script filename.
             "font": "Melissa 8",           // Reference to the font table, above.
             "max_tiles_per_line": 8,       // Optional: set to 0 for unlimited tiles.
+            "min_tiles_per_line": 0,       // Optional: Non-zero enforces a minimum tile-wise width.
             "output_format": "thingy",     // Optional: Output format for tilemap. "thingy", "atlas"
             "leading_zeroes": true,        // Optional: Forces 16-bit tilemap output (i.e. 0x0012 instead of 0x12)
             "tile_offset": 256,            // Optional: Constant to add to tile index (first tile: 0x0000 + 256 = 0x0100)
@@ -76,12 +77,19 @@ arguments to see what formats are available.
 
 Changelog
 ---------
+0.7.0
+* Add an optional argument to script JSON:
+** min_tiles_per_line: enforce a minimum tile count per line.
+* Split classes out to separate files.
+* Add girafarig, a simple script for interpolating 1bpp graphics.
+
 0.6.0
 * Adds several optional arguments to script json elements:
-** output_format: determines how the tilemap text file gets rendered. Possible values are "atlas", "thingy", null
+** output_format: determines how the tilemap text file gets rendered. Possible
+   values are "atlas", "thingy", null
 ** leading_zeroes: Forces tilemap output to always be 16-bit.
-** tile_offset: Adds a constant value to the tile index.
-                Useful if you want the tilemap to start counting somewhere other than zero.
+** tile_offset: Adds a constant value to the tile index. Useful if you want the
+   tilemap to start counting somewhere other than zero.
 ** raw_fn: Filename for raw tile graphic png output.
 ** deduped_fn: Filename for compressed tile graphic png output.
 ** tilemap_fn: Filename for text index tilemap file.
