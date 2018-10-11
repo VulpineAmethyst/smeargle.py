@@ -90,7 +90,7 @@ class Script:
                         length - max_tiles
                     ))
                     length = max_tiles
-            elif min_tiles > 0:
+            if min_tiles > 0:
                 if 0 < length < min_tiles:
                     print('INFO: "{}" is shorter than {} tiles by {}px'.format(
                         line,
