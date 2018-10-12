@@ -2,7 +2,7 @@
 
 DIR="smeargle-$1"
 
-rm -f smeargle/__pycache__/* && rmdir smeargle/__pycache__
+rm -rf smeargle/__pycache__
 mkdir ${DIR}
 cp -r smeargle ${DIR}
 cp -a smeargle.py porygon.py girafarig.py readme.txt melissa8.{png,json} test.txt example.json ${DIR}
