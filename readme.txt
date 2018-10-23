@@ -39,7 +39,8 @@ in each object or array.
             "tile_offset": 256,            // Optional: Constant to add to tile index (first tile: 0x0000 + 256 = 0x0100)
             "raw_fn": "ex_raw.png",        // Optional: Output filename for raw graphic tile data.
             "deduped_fn": "ex_comp.png",   // Optional: Output filename for deduped tile data.
-            "tilemap_fn": "example.tbl"    // Optional: Output filename for tilemap text.
+            "tilemap_fn": "example.tbl",   // Optional: Output filename for tilemap text.
+            "little_endian": false         // Optional: Output tilemap in little-endian format.
         }
     }
 }

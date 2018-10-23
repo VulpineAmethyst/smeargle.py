@@ -38,7 +38,8 @@ class Game:
             'leading_zeroes': False,
             'raw_fn': None,
             'deduped_fn': None,
-            'tilemap_fn': None
+            'tilemap_fn': None,
+            'little_endian': False,
         }
 
         for script, data in self._data['scripts'].items():

@@ -33,7 +33,8 @@ class Script:
             'leading_zeroes': get_or_default(kwargs, 'leading_zeroes',     False),
             'raw_fn':         get_or_default(kwargs, 'raw_fn',             None),
             'deduped_fn':     get_or_default(kwargs, 'deduped_fn',         None),
-            'tilemap_fn':     get_or_default(kwargs, 'tilemap_fn',         None)
+            'tilemap_fn':     get_or_default(kwargs, 'tilemap_fn',         None),
+            'little_endian':  get_or_default(kwargs, 'little_endian',      False),
         }
         mint = self._cfg['min_tiles']
         maxt = self._cfg['max_tiles']
@@ -155,6 +156,10 @@ class Script:
                         upper_val = int(floor(index / 256))
                         lower_val = int(index % 256)
                         if upper_val > 0 or self.leading_zeroes is True:
+                            if self._cfg['little_endian']:
+                                temp = upper_val
+                                upper_val = lower_val
+                                lower_val = temp
                             map_idx[data] = "<${:02x}><${:02x}>".format(upper_val, lower_val)
                         else:
                             map_idx[data] = "<${:02x}>".format(lower_val)
@@ -163,12 +168,23 @@ class Script:
                         upper_val = int(floor(index / 256))
                         lower_val = int(index % 256)
                         if upper_val > 0 or self.leading_zeroes is True:
+                            if self._cfg['little_endian']:
+                                temp = upper_val
+                                upper_val = lower_val
+                                lower_val = temp
                             map_idx[data] = "{:02x}{:02x}".format(upper_val, lower_val)
                         else:
                             map_idx[data] = "{:02x}".format(lower_val)
                     else:
-                        if self.leading_zeroes:
-                            map_idx[data] = '0x{:04x}'.format(unique + self.tile_offset)
+                        index = unique + self.tile_offset
+                        upper_val = int(floor(index / 256))
+                        lower_val = int(index % 256)
+                        if upper_val > 0 or self.leading_zeroes is True:
+                            if self._cfg['little_endian']:
+                                temp = upper_val
+                                upper_val = lower_val
+                                lower_val = temp
+                            map_idx[data] = '0x{:02x}{:02x}'.format(upper_val, lower_val)
                         else:
                             map_idx[data] = '0x{:02x}'.format(unique + self.tile_offset)
                     unique += 1
