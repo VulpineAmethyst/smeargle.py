@@ -200,7 +200,7 @@ def planar4(tile, palette):
 
 # Add new formats to this dict as they are implemented.
 formats = {
-    '1bpp':     linear1,
+    'linear1':  linear1,
     'linear2':  linear2,
     'planar2':  planar2,
     'nes2':     planar2,
